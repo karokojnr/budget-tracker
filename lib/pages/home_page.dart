@@ -4,7 +4,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
 
 import '../model/transaction_item.dart';
-import '../services/budget_service.dart';
+import '../view_models/budget_view_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -14,10 +14,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<TransactionItem> items = [];
   @override
   Widget build(BuildContext context) {
-    final budgetService = Provider.of<BudgetService>(context);
     final screenSize = MediaQuery.of(context).size;
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -27,9 +25,9 @@ class _HomePageState extends State<HomePage> {
               builder: (context) {
                 return AddTransactionDialog(
                   itemToAdd: (transactionItem) {
-                    setState(() {
-                      items.add(transactionItem);
-                    });
+                    final budgetViewModel =
+                        Provider.of<BudgetViewModel>(context, listen: false);
+                    budgetViewModel.addItem(transactionItem);
                   },
                 );
               });
@@ -46,19 +44,29 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Align(
                   alignment: Alignment.center,
-                  child:
-                      Consumer<BudgetService>(builder: (context, value, child) {
+                  child: Consumer<BudgetViewModel>(
+                      builder: (context, value, child) {
+                    final balance = value.getBalance(); // <- new
+                    final budget = value.getBudget(); // <- new
+                    double percentage = balance / budget;
+                    // Making sure percentage isnt negative and isnt bigger than 1
+                    if (percentage < 0) {
+                      percentage = 0;
+                    }
+                    if (percentage > 1) {
+                      percentage = 1;
+                    }
                     return CircularPercentIndicator(
                       radius: screenSize.width / 2,
                       lineWidth: 10.0, // how thick the line is
-                      percent: .5, // percent goes from 0 -> 1
+                      percent: percentage, // percent goes from 0 -> 1
                       backgroundColor: Colors.white,
                       center: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            "\$0",
-                            style: TextStyle(
+                          Text(
+                            "\$${balance.toString().split(".")[0]}", // <- updated
+                            style: const TextStyle(
                                 fontSize: 48, fontWeight: FontWeight.bold),
                           ),
                           const Text(
@@ -66,7 +74,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(fontSize: 18),
                           ),
                           Text(
-                            "Budget: \$${budgetService.budget}",
+                            "Budget: \$$budget", // <- updated
                             style: const TextStyle(fontSize: 10),
                           ),
                         ],
@@ -85,12 +93,17 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(
                   height: 10,
                 ),
-                ...List.generate(
-                  items.length,
-                  (index) => TransactionCard(
-                    item: items[index],
-                  ),
-                ),
+                Consumer<BudgetViewModel>(builder: (context, value, child) {
+                  return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: value.items.length,
+                      physics: const ClampingScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        return TransactionCard(
+                          item: value.items[index],
+                        );
+                      });
+                }),
               ],
             ),
           ),

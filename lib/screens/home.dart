@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
-import '../services/budget_service.dart';
+import '../view_models/budget_view_model.dart';
 import '../services/theme_service.dart';
 
 class Home extends StatefulWidget {
@@ -46,10 +46,10 @@ class _HomeState extends State<Home> {
                     builder: (context) {
                       return AddBudgetDialog(
                         budgetToAdd: (budget) {
-                          final budgetService = Provider.of<BudgetService>(
+                          final budgetViewModel = Provider.of<BudgetViewModel>(
                               context,
                               listen: false);
-                          budgetService.budget = budget;
+                          budgetViewModel.budget = budget;
                         },
                       );
                     });
